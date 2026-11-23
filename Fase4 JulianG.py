@@ -450,4 +450,63 @@ class GestorSoftwareFJ:
         for r in self._reservas:
             print(" ", r)
 
-def
+# SIMULACIÓN 
+def main():
+    g = GestorSoftwareFJ()
+
+    print("1) Cliente válido")
+    ana = g.registrar_cliente(nombre="Steve Jobs", documento="1012345678",
+                              correo="SteveJ@mail.com", telefono="3101234567")
+    print("2) Cliente con correo inválido")
+    g.registrar_cliente(nombre="Lucia gomez", documento="987654321",
+                        correo="lucia-sin-arroba", telefono="3001112233")
+    print("3) Cliente con parámetro faltante (sin nombre)")
+    g.registrar_cliente(documento="123456789", correo="x@mail.com", telefono="3001112233")
+    print("4) Segundo cliente válido")
+    carlos = g.registrar_cliente(nombre="Viviana Ruizzz", documento="80123456",
+                                 correo="vivianaRR@mail.com", telefono="6015551234")
+
+    print("5) Servicios válidos")
+    sala = g.registrar_servicio(ReservaSala, "Sala Innovación", 50000, 10)
+    equipo = g.registrar_servicio(AlquilerEquipo, "Portátil Pro", 8000, seguro=15000)
+    asesoria = g.registrar_servicio(AsesoriaEspecializada, "Asesoría en Python", 60000, "senior")
+    print("6) Servicio inválido (tarifa negativa)")
+    g.registrar_servicio(ReservaSala, "Sala X", -100, 5)
+    print("   Servicio inválido (nivel inexistente)")
+    g.registrar_servicio(AsesoriaEspecializada, "Asesoría Y", 40000, "dios")
+
+    print("7) Reserva exitosa -> confirmar -> procesar con descuento")
+    r1 = g.crear_reserva(ana, sala, 3)
+    g.confirmar(r1)
+    print("   Total:", g.procesar(r1, impuesto=0.19, descuento=0.10))
+
+    print("8) Reserva fallida: horas fuera de rango (error encadenado)")
+    g.crear_reserva(carlos, sala, 50)
+
+    print("9) Reserva fallida: servicio no disponible")
+    equipo.disponible = False
+    g.crear_reserva(carlos, equipo, 5)
+    equipo.disponible = True
+
+    print("10) Procesar sin confirmar (operación no permitida)")
+    r2 = g.crear_reserva(carlos, asesoria, 2)
+    g.procesar(r2)
+
+    print("11) Cancelar y volver a cancelar")
+    g.cancelar(r2)
+    g.cancelar(r2)
+
+    print("12) Cálculo inconsistente (descuento 150 %) y reserva con cliente inválido")
+    r3 = g.crear_reserva(carlos, equipo, 10)
+    g.confirmar(r3)
+    g.procesar(r3, descuento=1.5)
+    g.crear_reserva("no soy cliente", equipo, 2)
+    print("   Reserva r3 procesada sin impuesto:", g.procesar(r3, impuesto=0.0))
+
+    g.resumen()
+    print("\nLa aplicación terminó sin interrupciones. Revise logs/software_fj.log")
+
+
+if __name__ == "__main__":
+    main()
+
