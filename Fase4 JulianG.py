@@ -382,3 +382,72 @@ class Reserva(EntidadBase):
 
     def __str__(self):
         return self.describir()
+
+#  GESTOR
+class GestorSoftwareFJ:
+    def __init__(self):
+        # Liistas internas en lugar de base de datos
+        self._clientes = []
+        self._servicios = []
+        self._reservas = []
+
+    def _ejecutar(self, descripcion, funcion, *args, **kwargs):
+        """Ejecuta una operación capturando cualquier error y registrándolo.
+
+        Devuelve el resultado, o None si hubo error (la app sigue activa).
+        """
+        try:
+            resultado = funcion(*args, **kwargs)
+        except ErrorSoftwareFJ as error:
+            # Errores controlados del dominio
+            log.error("%s -> %s: %s", descripcion, type(error).__name__, error)
+            if error.__cause__:
+                log.error("   causa original: %r", error.__cause__)
+            print(f"  [ERROR] {descripcion}: {error}")
+            return None
+        except Exception as error:  # noqa: BLE001 - red de seguridad final
+            log.critical("%s -> error inesperado %r", descripcion, error)
+            print(f"  [ERROR INESPERADO] {descripcion}: {error!r}")
+            return None
+        else:
+            log.info("%s -> OK", descripcion)
+            print(f"  [OK] {descripcion}")
+            return resultado
+        finally:
+            log.info("Fin de operación: %s", descripcion)
+
+    def registrar_cliente(self, **datos):
+        cliente = self._ejecutar("Registrar cliente", Cliente, **datos)
+        if cliente:
+            self._clientes.append(cliente)
+        return cliente
+
+    def registrar_servicio(self, clase, *args, **kwargs):
+        servicio = self._ejecutar(f"Crear servicio {clase.__name__}", clase, *args, **kwargs)
+        if servicio:
+            self._servicios.append(servicio)
+        return servicio
+
+    def crear_reserva(self, cliente, servicio, horas):
+        reserva = self._ejecutar("Crear reserva", Reserva, cliente, servicio, horas)
+        if reserva:
+            self._reservas.append(reserva)
+        return reserva
+
+    def confirmar(self, reserva):
+        return self._ejecutar("Confirmar reserva", reserva.confirmar)
+
+    def cancelar(self, reserva):
+        return self._ejecutar("Cancelar reserva", reserva.cancelar)
+
+    def procesar(self, reserva, **kw):
+        return self._ejecutar("Procesar reserva", reserva.procesar, **kw)
+
+    def resumen(self):
+        print("\n===== RESUMEN =====")
+        print(f"Clientes: {len(self._clientes)} | Servicios: {len(self._servicios)} "
+              f"| Reservas: {len(self._reservas)}")
+        for r in self._reservas:
+            print(" ", r)
+
+def
