@@ -294,3 +294,91 @@ class AsesoriaEspecializada(Servicio):
     def describir(self):
         return (f"Asesoría '{self.nombre}' - nivel {self._nivel} - "
                 f"${self.tarifa_base:,.0f}/hora base")
+
+# RESERVA 
+class EstadoReserva(Enum):
+    PENDIENTE = "pendiente"
+    CONFIRMADA = "confirmada"
+    CANCELADA = "cancelada"
+    PROCESADA = "procesada"
+
+
+class Reserva(EntidadBase):
+    def __init__(self, cliente, servicio, horas):
+        super().__init__()
+        # Validacion de tipos de los objetos asociados
+        if not isinstance(cliente, Cliente):
+            raise ReservaInvalidaError("La reserva requiere un Cliente válido.")
+        if not isinstance(servicio, Servicio):
+            raise ReservaInvalidaError("La reserva requiere un Servicio válido.")
+        if not servicio.disponible:
+            raise ServicioNoDisponibleError(f"'{servicio.nombre}' no está disponible.")
+        # try/except/else: se validan las horas con las reglas del servicio
+        try:
+            servicio.validar_parametros(horas)
+        except ServicioInvalidoError as error:
+            # Encadenamiento de excepciones: se conserva la causa original
+            raise ReservaInvalidaError("No se pudo crear la reserva.") from error
+        else:
+            log.info("Parámetros de reserva válidos para %s", servicio.nombre)
+        self._cliente = cliente
+        self._servicio = servicio
+        self._horas = horas
+        self._estado = EstadoReserva.PENDIENTE
+
+    @property
+    def estado(self):
+        return self._estado
+
+    @property
+    def cliente(self):
+        return self._cliente
+
+    @property
+    def servicio(self):
+        return self._servicio
+
+    def confirmar(self):
+        """PENDIENTE -> CONFIRMADA."""
+        if self._estado is not EstadoReserva.PENDIENTE:
+            raise OperacionNoPermitidaError(
+                f"No se puede confirmar una reserva en estado {self._estado.value}."
+            )
+        self._estado = EstadoReserva.CONFIRMADA
+        log.info("Reserva #%s confirmada", self.id)
+
+    def cancelar(self):
+        """Se puede cancelar si está PENDIENTE o CONFIRMADA."""
+        if self._estado in (EstadoReserva.CANCELADA, EstadoReserva.PROCESADA):
+            raise OperacionNoPermitidaError(
+                f"No se puede cancelar una reserva {self._estado.value}."
+            )
+        self._estado = EstadoReserva.CANCELADA
+        log.info("Reserva #%s cancelada", self.id)
+
+    def procesar(self, impuesto=0.19, descuento=0.0):
+        """CONFIRMADA -> PROCESADA; devuelve el costo total."""
+        try:
+            if self._estado is not EstadoReserva.CONFIRMADA:
+                raise OperacionNoPermitidaError(
+                    "Solo se procesan reservas confirmadas "
+                    f"(estado actual: {self._estado.value})."
+                )
+            total = self._servicio.calcular_costo_total(self._horas, impuesto, descuento)
+        except ErrorSoftwareFJ as error:
+            log.error("Fallo al procesar reserva #%s: %s", self.id, error)
+            raise  # se ejecuta denuevo para que el llamador decida
+        else:
+            self._estado = EstadoReserva.PROCESADA
+            log.info("Reserva #%s procesada. Total: %s", self.id, total)
+            return total
+        finally:
+            # Se ejecuta siempre, haya o no error
+            log.info("Intento de procesamiento finalizado para reserva #%s", self.id)
+
+    def describir(self):
+        return (f"Reserva #{self.id} | {self._cliente.nombre} | "
+                f"{self._servicio.nombre} | {self._horas} h | {self._estado.value}")
+
+    def __str__(self):
+        return self.describir()
