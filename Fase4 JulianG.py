@@ -79,3 +79,82 @@ class EntidadBase(ABC):
     @abstractmethod
     def describir(self) -> str:
         """Cada entidad debe ofrecer una descripción legible."""
+
+#   CLIENTE 
+# Expresión regular simple para validar correos electrónicos
+_PATRON_CORREO = re.compile(r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
+
+
+class Cliente(EntidadBase):
+    """Cliente de Software FJ. Sus datos son privados y se validan al asignarse."""
+
+    def __init__(self, nombre=None, documento=None, correo=None, telefono=None):
+        super().__init__()  # se asigna el id
+        # Se usan los setters (propiedades) para que siempre se valide
+        self.nombre = nombre
+        self.documento = documento
+        self.correo = correo
+        self.telefono = telefono
+
+    # - nombre
+    @property
+    def nombre(self) -> str:
+        return self.__nombre
+
+    @nombre.setter
+    def nombre(self, valor):
+        if valor is None or str(valor).strip() == "":
+            raise ParametroFaltanteError("El nombre del cliente es obligatorio.")
+        if not isinstance(valor, str) or len(valor.strip()) < 3:
+            raise ClienteInvalidoError(f"Nombre inválido: {valor!r}.")
+        self.__nombre = valor.strip()
+
+    # - documentoo
+    @property
+    def documento(self) -> str:
+        return self.__documento
+
+    @documento.setter
+    def documento(self, valor):
+        if valor is None or str(valor).strip() == "":
+            raise ParametroFaltanteError("El documento del cliente es obligatorio.")
+        valor = str(valor).strip()
+        if not valor.isdigit() or not (6 <= len(valor) <= 12):
+            raise ClienteInvalidoError(
+                f"Documento inválido: {valor!r} (solo dígitos, 6 a 12)."
+            )
+        self.__documento = valor
+
+    # -correo
+    @property
+    def correo(self) -> str:
+        return self.__correo
+
+    @correo.setter
+    def correo(self, valor):
+        if valor is None or str(valor).strip() == "":
+            raise ParametroFaltanteError("El correo del cliente es obligatorio.")
+        if not _PATRON_CORREO.match(str(valor).strip()):
+            raise ClienteInvalidoError(f"Correo con formato inválido: {valor!r}.")
+        self.__correo = str(valor).strip().lower()
+
+    # -teléfono
+    @property
+    def telefono(self) -> str:
+        return self.__telefono
+
+    @telefono.setter
+    def telefono(self, valor):
+        if valor is None or str(valor).strip() == "":
+            raise ParametroFaltanteError("El teléfono del cliente es obligatorio.")
+        valor = str(valor).strip()
+        if not valor.isdigit() or not (7 <= len(valor) <= 10):
+            raise ClienteInvalidoError(f"Teléfono inválido: {valor!r}.")
+        self.__telefono = valor
+
+    def describir(self) -> str:
+        """Descripción del cliente (implementa el método abstracto)."""
+        return f"Cliente #{self.id}: {self.nombre} (doc. {self.documento}, {self.correo})"
+
+    def __str__(self) -> str:
+        return self.describir()
