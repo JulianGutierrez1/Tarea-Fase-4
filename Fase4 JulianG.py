@@ -60,3 +60,22 @@ def obtener_logger() -> logging.Logger:
 
 # Instancia compartida por todos los módulos
 log = obtener_logger()
+
+# ENTIDADES
+class EntidadBase(ABC):
+    """Toda entidad (cliente, servicio, reserva) tiene un id y se describe."""
+
+    _contador = itertools.count(1)  # generador de identificadores únicos
+
+    def __init__(self):
+        # Atributo "protegido": el id se asigna automáticamente
+        self._id = next(EntidadBase._contador)
+
+    @property
+    def id(self) -> int:
+        """Identificador de solo lectura (encapsulación)."""
+        return self._id
+
+    @abstractmethod
+    def describir(self) -> str:
+        """Cada entidad debe ofrecer una descripción legible."""
